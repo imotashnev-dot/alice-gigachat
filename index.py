@@ -4,12 +4,11 @@ import uuid
 import os
 import urllib3
 
-# Отключаем предупреждения о сертификатах Минцифры на зарубежном сервере Vercel
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 app = Flask(__name__)
 
-AUTH_KEY = os.environ.get("GIGACHAT_AUTH_KEY")
+AUTH_KEY = os.environ.get("GIGACHAT_AUTH_KEY", "").strip()
 
 def get_access_token():
     url = "https://sberbank.ru"
@@ -23,25 +22,31 @@ def get_access_token():
     resp = requests.post(url, headers=headers, data=payload, verify=False, timeout=2.5)
     return resp.json().get('access_token')
 
-@app.route('/', methods=['POST'])
-def webhook():
-    data = request.json
-    user_text = data.get('request', {}).get('original_utterance', '')
+@app.route('/', defaults={'path': ''}, methods=['GET', 'POST'])
+@app.route('/<path:path>', methods=['GET', 'POST'])
+def webhook(path):
+    if request.method == 'GET':
+        return "Server is working!", 200
 
-    # Приветствие при запуске навыка
+    data = request.get_json(force=True, silent=True)
+    if not data:
+        return jsonify({"error": "No JSON"}), 200
+
+    user_text = data.get('request', {}).get('original_utterance', '')
+    version = data.get('version', '1.0')
+
     if data.get('session', {}).get('new', False) and not user_text:
         return jsonify({
-            "version": data['version'],
+            "version": version,
             "response": {
                 "text": "Привет! ГигаЧат на связи. О чем поговорим?",
                 "end_session": False
             }
         })
 
-    # Выход из навыка
     if user_text.lower() in ['хватит', 'выход', 'стоп', 'пока']:
         return jsonify({
-            "version": data['version'],
+            "version": version,
             "response": {
                 "text": "До связи!",
                 "end_session": True
@@ -66,11 +71,11 @@ def webhook():
         resp = requests.post(chat_url, headers=headers, json=payload, verify=False, timeout=3.0)
         result = resp.json()
         answer = result['choices']['message']['content']
-    except Exception:
-        answer = "Не удалось получить ответ вовремя. Попробуй задать вопрос покороче."
+    except Exception as e:
+        answer = f"Ошибка связи со Сбером. Проверь ключ."
 
     return jsonify({
-        "version": data['version'],
+        "version": version,
         "response": {
             "text": answer,
             "end_session": False
