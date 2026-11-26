@@ -72,7 +72,7 @@ def webhook(path):
         result = resp.json()
         answer = result['choices']['message']['content']
     except Exception as e:
-        answer = f"Ошибка связи со Сбером. Проверь ключ."
+        answer =  answer = f"Детали: {str(e)}"
 
     return jsonify({
         "version": version,
