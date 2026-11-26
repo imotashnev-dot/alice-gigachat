@@ -19,7 +19,7 @@ def get_access_token():
         'Authorization': f'Basic {AUTH_KEY}'
     }
     payload = {'scope': 'GIGACHAT_API_PERS'}
-    resp = requests.post(url, headers=headers, data=payload, verify=False, timeout=2.5)
+    resp = requests.post(url, headers=headers, data=payload, verify=False, timeout=4.0)
     return resp.json().get('access_token')
 
 @app.route('/', defaults={'path': ''}, methods=['GET', 'POST'])
@@ -68,7 +68,7 @@ def webhook(path):
                 {"role": "user", "content": user_text}
             ]
         }
-        resp = requests.post(chat_url, headers=headers, json=payload, verify=False, timeout=3.0)
+        resp = requests.post(chat_url, headers=headers, json=payload, verify=False, timeout=4.0)
         result = resp.json()
         answer = result['choices']['message']['content']
     except Exception as e:
